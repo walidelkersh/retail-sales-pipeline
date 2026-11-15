@@ -173,7 +173,7 @@ def test_fact_sales(gold_lake):
     not table_path("silver", "invoice_lines").is_dir(),
     reason="real silver table is absent",
 )
-def test_real_gold_dimensions(tmp_path):
+def test_real_gold_tables(tmp_path):
     with duckdb.connect() as connection:
         connection.execute("INSTALL delta")
         connection.execute("LOAD delta")
@@ -189,12 +189,17 @@ def test_real_gold_dimensions(tmp_path):
     assert counts["dim_date"] == 739
     assert counts["dim_country"] == 43
     assert counts["fact_sales"] == 1_038_804
+    assert counts["dim_product"] == 4_758
+    assert counts["dim_customer"] == 5_940
     with duckdb.connect() as connection:
         connection.execute("INSTALL delta")
         connection.execute("LOAD delta")
         expose_table(connection, table_path("silver", "invoice_lines", tmp_path))
         for table in counts:
             expose_table(connection, table_path("gold", table, tmp_path))
+        assert connection.execute("""
+            SELECT sum(line_amount), count(DISTINCT invoice_no) FROM gold.fact_sales
+        """).fetchall() == [(Decimal("19057172.698"), 48_354)]
         assert connection.execute("""
             SELECT min(date), max(date) FROM gold.dim_date
         """).fetchall() == [(date(2009, 12, 1), date(2011, 12, 9))]
