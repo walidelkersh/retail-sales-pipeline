@@ -48,6 +48,27 @@ def bronze_lake(tmp_path):
             connection.table("online_retail_lines"),
             mode="overwrite",
         )
+        connection.execute("""
+            CREATE TABLE country_names AS
+            SELECT *, current_timestamp AS ingested_at
+            FROM (VALUES
+                ('EIRE', 'IE', NULL),
+                ('Channel Islands', NULL, 'Europe')
+            ) AS names(retailer_name, alpha_2, fallback_region)
+        """)
+        connection.execute("""
+            CREATE TABLE country_codes AS
+            SELECT *, current_timestamp AS ingested_at
+            FROM (VALUES
+                ('Ireland', 'IE', 'IRL', 'Europe', 'Northern Europe')
+            ) AS codes(name, "alpha-2", "alpha-3", region, "sub-region")
+        """)
+        for table in ("country_names", "country_codes"):
+            write_deltalake(
+                table_path("bronze", table, tmp_path),
+                connection.table(table),
+                mode="overwrite",
+            )
     return tmp_path
 
 
@@ -55,7 +76,7 @@ def test_silver_types_and_preserves_lines(bronze_lake, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     for _ in range(2):
         assert run_layer("silver", bronze_lake) == {
-            "rejected_lines": 6, "invoice_lines": 5,
+            "rejected_lines": 6, "countries": 2, "invoice_lines": 5,
         }
         with duckdb.connect() as connection:
             connection.execute("INSTALL delta")
@@ -92,7 +113,7 @@ def test_silver_types_and_preserves_lines(bronze_lake, tmp_path, monkeypatch):
 
 def test_silver_rejects_and_reconciles_lines(bronze_lake):
     counts = run_layer("silver", bronze_lake)
-    assert counts == {"rejected_lines": 6, "invoice_lines": 5}
+    assert counts == {"rejected_lines": 6, "countries": 2, "invoice_lines": 5}
     with duckdb.connect() as connection:
         connection.execute("INSTALL delta")
         connection.execute("LOAD delta")
@@ -133,6 +154,22 @@ def test_silver_rejects_and_reconciles_lines(bronze_lake):
         """).fetchall() == []
 
 
+def test_silver_countries(bronze_lake):
+    run_layer("silver", bronze_lake)
+    with duckdb.connect() as connection:
+        connection.execute("INSTALL delta")
+        connection.execute("LOAD delta")
+        expose_table(connection, table_path("silver", "countries", bronze_lake))
+        countries = connection.sql("SELECT * FROM silver.countries ORDER BY retailer_name")
+        assert countries.columns == [
+            "retailer_name", "alpha_2", "alpha_3", "iso_name", "region", "sub_region",
+        ]
+        assert countries.fetchall() == [
+            ("Channel Islands", None, None, None, "Europe", None),
+            ("EIRE", "IE", "IRL", "Ireland", "Europe", "Northern Europe"),
+        ]
+
+
 @pytest.mark.skipif(
     not table_path("bronze", "online_retail_lines").is_dir(),
     reason="real bronze table is absent",
@@ -141,12 +178,13 @@ def test_real_bronze_reject_counts(tmp_path):
     with duckdb.connect() as connection:
         connection.execute("INSTALL delta")
         connection.execute("LOAD delta")
-        bronze_path = table_path("bronze", "online_retail_lines").as_posix()
-        write_deltalake(
-            table_path("bronze", "online_retail_lines", tmp_path),
-            connection.sql("SELECT * FROM delta_scan(?)", params=[bronze_path]),
-            mode="overwrite",
-        )
+        for table in ("online_retail_lines", "country_names", "country_codes"):
+            bronze_path = table_path("bronze", table).as_posix()
+            write_deltalake(
+                table_path("bronze", table, tmp_path),
+                connection.sql("SELECT * FROM delta_scan(?)", params=[bronze_path]),
+                mode="overwrite",
+            )
     counts = run_layer("silver", tmp_path)
     assert counts["invoice_lines"] + counts["rejected_lines"] == 1_067_371
     with duckdb.connect() as connection:
