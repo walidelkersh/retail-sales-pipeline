@@ -1,7 +1,7 @@
 [project]
 name = "retail-sales-pipeline"
 version = "0.1.0"
-description = "Medallion lakehouse pipeline for the UCI Online Retail II dataset on Microsoft Fabric"
+description = "Medallion pipeline for the UCI Online Retail II dataset: DuckDB SQL over Delta tables"
 requires-python = ">=3.11"
 dependencies = [
     "duckdb",
