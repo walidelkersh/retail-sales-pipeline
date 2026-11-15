@@ -12,3 +12,9 @@ SELECT
     source_sheet,
     source_row
 FROM bronze.online_retail_lines
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM silver.rejected_lines
+    WHERE rejected_lines.source_sheet = online_retail_lines.source_sheet
+        AND rejected_lines.source_row = online_retail_lines.source_row
+)

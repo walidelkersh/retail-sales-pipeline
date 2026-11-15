@@ -27,15 +27,17 @@ def run_layer(layer, lake_root=LAKE_ROOT):
             expose_table(connection, delta_log.parent)
         sql_directory = Path(__file__).resolve().parents[1] / "sql" / layer
         for query in sorted(sql_directory.glob("*.sql")):
-            path = table_path(layer, query.stem, lake_root)
+            # a prefix such as "00." only orders the files within a layer
+            table = query.stem.split(".")[-1]
+            path = table_path(layer, table, lake_root)
             write_deltalake(
                 path,
                 connection.sql(query.read_text()),
                 mode="overwrite",
             )
             expose_table(connection, path)
-            table_counts[query.stem] = connection.execute(
-                f'SELECT count(*) FROM "{layer}"."{query.stem}"'
+            table_counts[table] = connection.execute(
+                f'SELECT count(*) FROM "{layer}"."{table}"'
             ).fetchall()[0][0]
     return table_counts
 
