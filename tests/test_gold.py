@@ -198,8 +198,12 @@ def test_real_gold_tables(tmp_path):
         for table in counts:
             expose_table(connection, table_path("gold", table, tmp_path))
         assert connection.execute("""
-            SELECT sum(line_amount), count(DISTINCT invoice_no) FROM gold.fact_sales
-        """).fetchall() == [(Decimal("19057172.698"), 48_354)]
+            SELECT
+                sum(line_amount),
+                count(DISTINCT invoice_no),
+                count(*) FILTER (WHERE customer_key = 0)
+            FROM gold.fact_sales
+        """).fetchall() == [(Decimal("19057172.698"), 48_354, 229_327)]
         assert connection.execute("""
             SELECT min(date), max(date) FROM gold.dim_date
         """).fetchall() == [(date(2009, 12, 1), date(2011, 12, 9))]
