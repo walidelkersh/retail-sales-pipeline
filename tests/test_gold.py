@@ -1,4 +1,5 @@
-from datetime import date
+from datetime import date, datetime
+from decimal import Decimal
 
 import duckdb
 import pytest
@@ -65,6 +66,7 @@ def gold_lake(tmp_path):
     for _ in range(2):
         assert run_layer("gold", tmp_path) == {
             "dim_country": 2, "dim_customer": 4, "dim_date": 3, "dim_product": 3,
+            "fact_sales": 9,
         }
     return tmp_path
 
@@ -133,6 +135,40 @@ def test_dim_country(gold_lake):
         ]
 
 
+def test_fact_sales(gold_lake):
+    with duckdb.connect() as connection:
+        connection.execute("INSTALL delta")
+        connection.execute("LOAD delta")
+        expose_table(connection, table_path("gold", "fact_sales", gold_lake))
+        sales = connection.sql("SELECT * FROM gold.fact_sales ORDER BY source_row")
+        assert sales.columns == [
+            "invoice_no", "date_key", "product_key", "customer_key", "country_key",
+            "is_cancellation", "quantity", "unit_price", "line_amount", "invoice_ts",
+            "source_sheet", "source_row",
+        ]
+        assert sales.types[8] == duckdb.sqltype("DECIMAL(18,3)")
+        assert sales.fetchall() == [
+            ("1", 20111204, 1, 2, 2, False, 1, Decimal("1.250"), Decimal("1.250"),
+             datetime(2011, 12, 4, 9), "Year 2010-2011", 1),
+            ("2", 20111202, 1, 1, 2, False, 1, Decimal("1.250"), Decimal("1.250"),
+             datetime(2011, 12, 2, 12), "Year 2010-2011", 2),
+            ("C3", 20111202, 1, 2, 2, True, -1, Decimal("1.250"), Decimal("-1.250"),
+             datetime(2011, 12, 2, 8), "Year 2010-2011", 3),
+            ("4", 20111202, 1, 0, 2, False, 1, Decimal("1.250"), Decimal("1.250"),
+             datetime(2011, 12, 2, 12), "Year 2010-2011", 4),
+            ("5", 20111202, 1, 0, 2, False, 1, Decimal("1.250"), Decimal("1.250"),
+             datetime(2011, 12, 2, 12), "Year 2010-2011", 5),
+            ("6", 20111202, 1, 0, 2, False, 1, Decimal("1.250"), Decimal("1.250"),
+             datetime(2011, 12, 2, 12), "Year 2010-2011", 6),
+            ("7", 20111204, 3, 1, 1, False, 1, Decimal("1.250"), Decimal("1.250"),
+             datetime(2011, 12, 4, 12), "Year 2010-2011", 7),
+            ("8", 20111204, 3, 0, 1, False, 1, Decimal("1.250"), Decimal("1.250"),
+             datetime(2011, 12, 4, 12), "Year 2010-2011", 8),
+            ("9", 20111204, 2, 3, 1, False, 1, Decimal("1.250"), Decimal("1.250"),
+             datetime(2011, 12, 4, 12), "Year 2010-2011", 9),
+        ]
+
+
 @pytest.mark.skipif(
     not table_path("silver", "invoice_lines").is_dir(),
     reason="real silver table is absent",
@@ -152,6 +188,7 @@ def test_real_gold_dimensions(tmp_path):
     counts = run_layer("gold", tmp_path)
     assert counts["dim_date"] == 739
     assert counts["dim_country"] == 43
+    assert counts["fact_sales"] == 1_038_804
     with duckdb.connect() as connection:
         connection.execute("INSTALL delta")
         connection.execute("LOAD delta")

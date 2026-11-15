@@ -4,7 +4,7 @@ from deltalake import write_deltalake
 
 from pipeline.checks import run_checks
 from pipeline.lake import table_path
-from pipeline.transform import lake_connection
+from pipeline.transform import lake_connection, run_layer
 
 
 @pytest.fixture
@@ -123,6 +123,70 @@ def test_silver_checks_missing_column_and_count(checks_lake):
     )
 
 
+@pytest.fixture
+def gold_checks_lake(checks_lake):
+    with lake_connection(checks_lake) as connection:
+        write_deltalake(
+            table_path("silver", "countries", checks_lake),
+            connection.sql("""
+                SELECT * FROM (VALUES
+                    ('United Kingdom', 'GB', 'GBR', 'United Kingdom', 'Europe', 'Northern Europe'),
+                    ('France', 'FR', 'FRA', 'France', 'Europe', 'Western Europe'),
+                    ('Germany', 'DE', 'DEU', 'Germany', 'Europe', 'Western Europe')
+                ) AS countries(retailer_name, alpha_2, alpha_3, iso_name, region, sub_region)
+            """),
+            mode="overwrite",
+        )
+    run_layer("gold", checks_lake)
+    return checks_lake
+
+
+def test_gold_checks_pass(gold_checks_lake, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    assert run_checks("gold", gold_checks_lake) == {
+        "dimension_keys_are_unique": 0,
+        "fact_sales_amount_is_quantity_times_price": 0,
+        "fact_sales_key_is_unique": 0,
+        "fact_sales_keys_resolve": 0,
+        "fact_sales_matches_silver": 0,
+    }
+
+
+def test_gold_checks_report_all_failures(gold_checks_lake):
+    with lake_connection(gold_checks_lake) as connection:
+        write_deltalake(
+            table_path("gold", "fact_sales", gold_checks_lake),
+            connection.sql("""
+                SELECT * REPLACE (
+                    CAST(NULL AS INTEGER) AS date_key,
+                    -1 AS product_key,
+                    CAST(NULL AS BIGINT) AS customer_key,
+                    -1 AS country_key,
+                    CAST(line_amount + 1 AS DECIMAL(18,3)) AS line_amount
+                ) FROM gold.fact_sales WHERE NOT is_cancellation
+                UNION ALL
+                SELECT * FROM gold.fact_sales
+            """),
+            mode="overwrite",
+        )
+        write_deltalake(
+            table_path("gold", "dim_country", gold_checks_lake),
+            connection.sql("""
+                SELECT * FROM gold.dim_country
+                UNION ALL
+                SELECT * FROM gold.dim_country WHERE country_key = 1
+            """),
+            mode="overwrite",
+        )
+    with pytest.raises(ValueError) as failure:
+        run_checks("gold", gold_checks_lake)
+    assert str(failure.value) == (
+        "Checks failed: dimension_keys_are_unique: 1; "
+        "fact_sales_amount_is_quantity_times_price: 1; fact_sales_key_is_unique: 1; "
+        "fact_sales_keys_resolve: 1; fact_sales_matches_silver: 1"
+    )
+
+
 @pytest.mark.skipif(
     not table_path("silver", "invoice_lines").is_dir(),
     reason="real silver table is absent",
@@ -135,3 +199,11 @@ def test_real_silver_checks():
         "rejected_lines_reason_is_known": 0,
         "silver_reconciles_with_bronze": 0,
     }
+    if table_path("gold", "fact_sales").is_dir():
+        assert run_checks("gold") == {
+            "dimension_keys_are_unique": 0,
+            "fact_sales_amount_is_quantity_times_price": 0,
+            "fact_sales_key_is_unique": 0,
+            "fact_sales_keys_resolve": 0,
+            "fact_sales_matches_silver": 0,
+        }
