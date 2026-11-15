@@ -89,6 +89,84 @@ def test_checksum_mismatch_stops_before_extraction(tmp_path):
     assert not (raw / bronze.WORKBOOK_NAME).exists()
 
 
+@pytest.fixture
+def country_codes(tmp_path):
+    countries = tmp_path / "country_codes.csv"
+    countries.write_text(
+        "name,alpha-2,alpha-3,country-code,iso_3166-2,region,sub-region,"
+        "intermediate-region,region-code,sub-region-code,intermediate-region-code\n"
+        'Namibia,NA,NAM,516,ISO 3166-2:NA,Africa,Sub-Saharan Africa,Southern Africa,002,202,018\n'
+        'Antarctica,AQ,ATA,010,ISO 3166-2:AQ,"","","","","",""\n',
+        encoding="utf-8",
+    )
+    return countries
+
+
+def test_country_codes_preserve_text_and_replace_on_rerun(country_codes, tmp_path):
+    expected = [
+        ("Antarctica", "AQ", "ATA", "010", "ISO 3166-2:AQ", None, None, None, None, None, None),
+        ("Namibia", "NA", "NAM", "516", "ISO 3166-2:NA", "Africa", "Sub-Saharan Africa",
+         "Southern Africa", "002", "202", "018"),
+    ]
+    for _ in range(2):
+        assert bronze.ingest_reference(country_codes, "country_codes", tmp_path) == 2
+        with duckdb.connect() as connection:
+            path = table_path("bronze", "country_codes", tmp_path).as_posix()
+            connection.execute("INSTALL delta")
+            connection.execute("LOAD delta")
+            assert connection.execute(
+                "SELECT * EXCLUDE (ingested_at) FROM delta_scan(?) ORDER BY name",
+                [path],
+            ).fetchall() == expected
+            assert connection.execute(
+                "SELECT count(ingested_at), any_value(typeof(ingested_at)) FROM delta_scan(?)",
+                [path],
+            ).fetchall() == [(2, "TIMESTAMP WITH TIME ZONE")]
+
+
+def test_retailer_country_names(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    assert bronze.ingest_reference(bronze.COUNTRY_NAMES, "country_names", tmp_path) == 43
+    with duckdb.connect() as connection:
+        path = table_path("bronze", "country_names", tmp_path).as_posix()
+        connection.execute("INSTALL delta")
+        connection.execute("LOAD delta")
+        assert connection.execute(
+            "SELECT count(*), count(DISTINCT retailer_name), "
+            "count(*) FILTER (WHERE (alpha_2 IS NULL) = (fallback_region IS NULL)) "
+            "FROM delta_scan(?)",
+            [path],
+        ).fetchall() == [(43, 43, 0)]
+        assert connection.execute(
+            "SELECT retailer_name, alpha_2 FROM delta_scan(?) "
+            "WHERE retailer_name IN ('EIRE', 'RSA', 'USA') ORDER BY retailer_name",
+            [path],
+        ).fetchall() == [("EIRE", "IE"), ("RSA", "ZA"), ("USA", "US")]
+
+
+@pytest.mark.skipif(
+    not Path("data/lake/Files/raw/country_codes.csv").is_file(),
+    reason="real country codes are absent",
+)
+def test_real_country_codes_cover_retailer_countries(tmp_path):
+    countries = Path("data/lake/Files/raw/country_codes.csv")
+    assert bronze.ingest_reference(countries, "country_codes", tmp_path) == 249
+    assert bronze.ingest_reference(bronze.COUNTRY_NAMES, "country_names", tmp_path) == 43
+    with duckdb.connect() as connection:
+        codes_path = table_path("bronze", "country_codes", tmp_path).as_posix()
+        names_path = table_path("bronze", "country_names", tmp_path).as_posix()
+        connection.execute("INSTALL delta")
+        connection.execute("LOAD delta")
+        assert connection.execute(
+            "SELECT count(*) FROM delta_scan(?)", [codes_path],
+        ).fetchall() == [(249,)]
+        assert connection.execute(
+            'SELECT alpha_2 FROM delta_scan(?) WHERE alpha_2 IS NOT NULL '
+            'EXCEPT SELECT "alpha-2" FROM delta_scan(?)',
+            [names_path, codes_path],
+        ).fetchall() == []
+
+
 @pytest.mark.skipif(
     not Path("data/lake/Files/raw/online_retail_II.xlsx").is_file(),
     reason="real workbook is absent",
