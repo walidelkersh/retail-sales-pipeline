@@ -28,13 +28,19 @@ uv run pytest
 
 The tables are written under `data/lake`, which is not committed. On a fresh clone the tests that need the real data are skipped until the pipeline has run.
 
+## Power BI
+
+`powerbi/retail-sales.pbip` opens in Power BI Desktop. Each of its five tables is a Power Query that reads one gold Delta table with `DeltaLake.Table` from the folder in the `LakeRoot` parameter, so the parameter has to point at your own `data/lake` before the first refresh. The report has three pages: Overview, Products and Operations.
+
+I checked it in Power BI Desktop 2.159. After a refresh the Products table totals 19,057,172.70 pounds and the Customers card shows 5,939, which are the numbers that the tests assert.
+
 ## Layout
 
 ```
 pipeline/    bronze ingest, the SQL runner, the check runner
 sql/         silver, gold and checks, one statement per file
 reference/   retailer country names mapped to ISO codes, written by hand
-tests/       literal fixtures with hand-computed answers, plus tests on the real data
+tests/       small literal fixtures with literal expected values, plus tests on the real data
 powerbi/     semantic model and report over the gold tables
 docs/        data sources, transformation rules, data model and lineage
 ```
@@ -52,7 +58,7 @@ I did not use Spark, because one million lines fit on one machine and DuckDB rea
 ## What is not done
 
 - It has not run on Microsoft Fabric yet. It is written for Fabric Python notebooks, which come with DuckDB and delta-rs, but I have only run it on my own machine.
-- The Power BI model and report in `powerbi/` are written as text. The model parses with the Microsoft tabular library and the report files match the published schemas, but I have not opened them in Power BI Desktop or refreshed them yet.
+- The report is not published anywhere. It reads the gold tables from a local folder, and it has only been opened in Power BI Desktop.
 - Lines that repeat another line of the same invoice exactly are kept, because the workbook has no line number and I cannot tell a double scan from a double export.
 - The invoice time has the right clock time and a wrong zone label, which matters only if it is converted to another zone.
 - Korea is mapped to South Korea, which is an assumption. The country list itself says it is not authoritative.

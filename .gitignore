@@ -5,3 +5,5 @@ __pycache__/
 .vscode/
 .idea/
 data/
+**/.pbi/localSettings.json
+**/.pbi/cache.abf
