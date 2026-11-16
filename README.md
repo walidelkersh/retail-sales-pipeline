@@ -43,6 +43,10 @@ Each notebook runs the same commands as above against the lakehouse, so the chec
 
 `powerbi/retail-sales.pbip` opens in Power BI Desktop. Each of its five tables is a Power Query that reads one gold Delta table with `DeltaLake.Table` from the folder in the `LakeRoot` parameter, so the parameter has to point at your own `data/lake` before the first refresh. The report has three pages: Overview, Products and Operations.
 
+![The Overview page, with five cards, net revenue by month and net revenue by region](docs/report-overview.png)
+
+The line falls at the end because the data stops on 9 December 2011, so the last month is not a whole month.
+
 I checked it in Power BI Desktop 2.159. After a refresh the Products table totals 19,057,172.70 pounds and the Customers card shows 5,939, which are the numbers that the tests assert.
 
 ## Layout
