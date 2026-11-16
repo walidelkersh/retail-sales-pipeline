@@ -7,7 +7,7 @@ from zipfile import ZipFile
 import duckdb
 from deltalake import write_deltalake
 
-from pipeline.lake import LAKE_ROOT, raw_directory, table_path
+from pipeline.lake import LAKE_ROOT, raw_directory, write_target
 
 
 ZIP_URL = "https://archive.ics.uci.edu/static/public/502/online+retail+ii.zip"
@@ -67,7 +67,7 @@ def ingest_workbook(workbook, lake_root=LAKE_ROOT):
             sheet_parameters,
         )
         write_deltalake(
-            table_path("bronze", "online_retail_lines", lake_root),
+            write_target("bronze", "online_retail_lines", lake_root),
             connection.table("online_retail_lines"),
             mode="overwrite",
         )
@@ -86,7 +86,7 @@ def ingest_reference(reference, table, lake_root=LAKE_ROOT):
             [str(reference)],
         )
         write_deltalake(
-            table_path("bronze", table, lake_root),
+            write_target("bronze", table, lake_root),
             connection.table("country_reference"),
             mode="overwrite",
         )

@@ -5,7 +5,7 @@ from pathlib import Path
 import duckdb
 from deltalake import write_deltalake
 
-from pipeline.lake import LAKE_ROOT, table_path
+from pipeline.lake import LAKE_ROOT, table_path, write_target
 
 
 def expose_table(connection, path):
@@ -40,7 +40,7 @@ def run_layer(layer, lake_root=LAKE_ROOT):
             table = query.stem.split(".")[-1]
             path = table_path(layer, table, lake_root)
             write_deltalake(
-                path,
+                write_target(layer, table, lake_root),
                 connection.sql(query.read_text()),
                 mode="overwrite",
             )
