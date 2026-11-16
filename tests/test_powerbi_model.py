@@ -32,14 +32,16 @@ def test_source_columns_match_gold(gold_lake):
 
 def test_report_fields_exist_in_model():
     powerbi = Path(__file__).resolve().parents[1] / "powerbi"
+    # Power BI Desktop quotes a name only when it has a space in it.
     members = {
-        path.stem: set(
-            re.findall(
-                r"^\t(?:column|measure) '([^']+)'",
+        path.stem: {
+            quoted or bare
+            for quoted, bare in re.findall(
+                r"^\t(?:column|measure) (?:'([^']+)'|(\w+))",
                 path.read_text(encoding="utf-8"),
                 re.M,
             )
-        )
+        }
         for path in (powerbi / "retail-sales.SemanticModel/definition/tables").glob("*.tmdl")
     }
 

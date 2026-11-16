@@ -22,7 +22,7 @@ table Sales
 		lineageTag: 6f01402a-0f16-4a38-b6f4-500c06f7a9c2
 
 	/// Count of distinct non-cancelled invoice numbers.
-	measure 'Orders' = CALCULATE(DISTINCTCOUNT(Sales[Invoice No]), Sales[Is Cancellation] = FALSE())
+	measure Orders = CALCULATE(DISTINCTCOUNT(Sales[Invoice No]), Sales[Is Cancellation] = FALSE())
 		formatString: #,##0
 		lineageTag: 6f612216-920b-45b5-ac82-15b868eb9df5
 
@@ -42,7 +42,7 @@ table Sales
 		lineageTag: 239039df-b28e-4c34-8ff0-d78cf587f6f7
 
 	/// Count of distinct customers on sales lines, excluding unknown customer key 0.
-	measure 'Customers' = CALCULATE(DISTINCTCOUNT(Sales[Customer Key]), Sales[Customer Key] <> 0)
+	measure Customers = CALCULATE(DISTINCTCOUNT(Sales[Customer Key]), Sales[Customer Key] <> 0)
 		formatString: #,##0
 		lineageTag: 37d60eb4-215e-45ad-af97-ef6f00a19d5f
 
@@ -117,7 +117,7 @@ table Sales
 
 		annotation SummarizationSetBy = User
 
-	column 'Quantity'
+	column Quantity
 		dataType: int64
 		formatString: 0
 		lineageTag: fc24ddce-2f5d-4243-bed2-004f9b666506
@@ -193,3 +193,4 @@ table Sales
 					Typed
 
 	annotation PBI_ResultType = Table
+

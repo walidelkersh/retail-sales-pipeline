@@ -6,8 +6,11 @@ model Model
 
 annotation __PBI_TimeIntelligenceEnabled = 0
 
+annotation PBI_ProTooling = ["DevMode"]
+
 ref table Sales
 ref table Date
 ref table Product
 ref table Customer
 ref table Country
+

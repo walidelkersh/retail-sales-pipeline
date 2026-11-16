@@ -44,7 +44,7 @@ table Country
 
 		annotation SummarizationSetBy = User
 
-	column 'Region'
+	column Region
 		dataType: string
 		lineageTag: 87b1e129-415b-4288-b6cd-e0164a3a0875
 		summarizeBy: none
@@ -78,3 +78,4 @@ table Country
 					Typed
 
 	annotation PBI_ResultType = Table
+

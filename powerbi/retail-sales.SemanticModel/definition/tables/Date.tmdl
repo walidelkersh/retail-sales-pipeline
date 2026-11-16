@@ -12,7 +12,7 @@ table Date
 
 		annotation SummarizationSetBy = User
 
-	column 'Date'
+	column Date
 		dataType: dateTime
 		isKey
 		formatString: yyyy-mm-dd
@@ -24,7 +24,7 @@ table Date
 
 		annotation UnderlyingDateTimeDataType = Date
 
-	column 'Year'
+	column Year
 		dataType: int64
 		formatString: 0
 		lineageTag: 5c37ab9d-1c72-4f5f-84a7-3e094eade638
@@ -33,7 +33,7 @@ table Date
 
 		annotation SummarizationSetBy = User
 
-	column 'Quarter'
+	column Quarter
 		dataType: int64
 		formatString: 0
 		lineageTag: 3441c269-2120-4e8e-a5f8-cfcec7b5defc
@@ -42,7 +42,7 @@ table Date
 
 		annotation SummarizationSetBy = User
 
-	column 'Month'
+	column Month
 		dataType: int64
 		formatString: 0
 		lineageTag: 540e0c5a-530a-4390-bb33-d5d55a23ebba
@@ -106,3 +106,4 @@ table Date
 					Typed
 
 	annotation PBI_ResultType = Table
+

@@ -46,3 +46,4 @@ table Customer
 					Typed
 
 	annotation PBI_ResultType = Table
+
