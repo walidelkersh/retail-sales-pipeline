@@ -13,6 +13,19 @@ def get_id(path):
     ).stdout.strip().strip("\"'")
 
 
+def import_item(workspace, name, item_type, folder, format=None):
+    platform = {
+        "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+        "metadata": {"type": item_type, "displayName": name},
+        "config": {"version": "2.0", "logicalId": "00000000-0000-0000-0000-000000000000"},
+    }
+    (folder / ".platform").write_text(json.dumps(platform, indent=1) + "\n", encoding="utf-8")
+    command = ["fab", "import", f"{workspace}/{name}.{item_type}", "-i", str(folder)]
+    if format:
+        command.extend(["--format", format])
+    subprocess.run([*command, "-f"], check=True)
+
+
 def main():
     if len(sys.argv) != 3:
         raise SystemExit('Usage: uv run python fabric/deploy.py "<workspace path>" "<lakehouse name>"')
@@ -51,18 +64,19 @@ def main():
             (folder / "notebook-content.ipynb").write_text(
                 json.dumps(notebook, indent=1) + "\n", encoding="utf-8",
             )
-            platform = {
-                "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
-                "metadata": {"type": "Notebook", "displayName": name},
-                "config": {"version": "2.0", "logicalId": "00000000-0000-0000-0000-000000000000"},
-            }
-            (folder / ".platform").write_text(
-                json.dumps(platform, indent=1) + "\n", encoding="utf-8",
-            )
-            subprocess.run(
-                ["fab", "import", f"{workspace}/{name}.Notebook", "-i", str(folder), "--format", ".ipynb", "-f"],
-                check=True,
-            )
+            import_item(workspace, name, "Notebook", folder, ".ipynb")
+
+        # These IDs are tenant-specific, so resolve them only when deploying.
+        pipeline = json.loads((root / "fabric" / "pipeline-content.json").read_text(encoding="utf-8"))
+        for activity in pipeline["properties"]["activities"]:
+            activity["typeProperties"]["notebookId"] = get_id(f"{workspace}/retail_{activity['name']}.Notebook")
+            activity["typeProperties"]["workspaceId"] = workspace_id
+        folder = Path(staging) / "retail_pipeline.DataPipeline"
+        folder.mkdir()
+        (folder / "pipeline-content.json").write_text(
+            json.dumps(pipeline, indent=2) + "\n", encoding="utf-8",
+        )
+        import_item(workspace, "retail_pipeline", "DataPipeline", folder)
 
 
 if __name__ == "__main__":
