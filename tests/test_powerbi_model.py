@@ -1,3 +1,4 @@
+import json
 import re
 from pathlib import Path
 
@@ -27,3 +28,39 @@ def test_source_columns_match_gold(gold_lake):
             for field in DeltaTable(table_path("gold", gold_table, gold_lake)).schema().fields
         }
         assert source_columns == gold_columns, name
+
+
+def test_report_fields_exist_in_model():
+    powerbi = Path(__file__).resolve().parents[1] / "powerbi"
+    members = {
+        path.stem: set(
+            re.findall(
+                r"^\t(?:column|measure) '([^']+)'",
+                path.read_text(encoding="utf-8"),
+                re.M,
+            )
+        )
+        for path in (powerbi / "retail-sales.SemanticModel/definition/tables").glob("*.tmdl")
+    }
+
+    def check_fields(node, sources):
+        if isinstance(node, dict):
+            sources = sources | {
+                source["Name"]: source["Entity"]
+                for source in node.get("From", [])
+                if "Entity" in source
+            }
+            if "Property" in node:
+                source = node["Expression"]["SourceRef"]
+                entity = source.get("Entity", sources.get(source.get("Source")))
+                assert node["Property"] in members.get(entity, set()), (entity, node)
+            for value in node.values():
+                check_fields(value, sources)
+        elif isinstance(node, list):
+            for value in node:
+                check_fields(value, sources)
+
+    visuals = list((powerbi / "retail-sales.Report").rglob("visual.json"))
+    assert visuals
+    for path in visuals:
+        check_fields(json.loads(path.read_text(encoding="utf-8")), {})

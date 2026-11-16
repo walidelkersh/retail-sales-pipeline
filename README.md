@@ -35,7 +35,7 @@ pipeline/    bronze ingest, the SQL runner, the check runner
 sql/         silver, gold and checks, one statement per file
 reference/   retailer country names mapped to ISO codes, written by hand
 tests/       literal fixtures with hand-computed answers, plus tests on the real data
-powerbi/     semantic model over the gold tables
+powerbi/     semantic model and report over the gold tables
 docs/        data sources, transformation rules, data model and lineage
 ```
 
@@ -52,7 +52,7 @@ I did not use Spark, because one million lines fit on one machine and DuckDB rea
 ## What is not done
 
 - It has not run on Microsoft Fabric yet. It is written for Fabric Python notebooks, which come with DuckDB and delta-rs, but I have only run it on my own machine.
-- The Power BI semantic model in `powerbi/` parses with the Microsoft tabular library, but I have not opened it in Power BI Desktop or refreshed it yet.
+- The Power BI model and report in `powerbi/` are written as text. The model parses with the Microsoft tabular library and the report files match the published schemas, but I have not opened them in Power BI Desktop or refreshed them yet.
 - Lines that repeat another line of the same invoice exactly are kept, because the workbook has no line number and I cannot tell a double scan from a double export.
 - The invoice time has the right clock time and a wrong zone label, which matters only if it is converted to another zone.
 - Korea is mapped to South Korea, which is an assumption. The country list itself says it is not authoritative.
