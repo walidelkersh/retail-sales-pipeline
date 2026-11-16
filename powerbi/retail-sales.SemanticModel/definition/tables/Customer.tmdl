@@ -1,0 +1,48 @@
+table Customer
+	lineageTag: fe3cc56c-1a08-48b9-9dda-091880133127
+
+	column 'Customer Key'
+		dataType: int64
+		isHidden
+		isKey
+		formatString: 0
+		lineageTag: 31f022f7-4fad-4a9d-a2d7-62ce0ffaf0e8
+		summarizeBy: none
+		sourceColumn: customer_key
+
+		annotation SummarizationSetBy = User
+
+	column 'Customer ID'
+		dataType: int64
+		formatString: 0
+		lineageTag: 21ae2f91-11af-4828-8bec-400f2efd3a7a
+		summarizeBy: none
+		sourceColumn: customer_id
+
+		annotation SummarizationSetBy = User
+
+	column 'First Invoice Date'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: fd6a6fba-54c1-454c-bc75-486bc1efcb8b
+		summarizeBy: none
+		sourceColumn: first_invoice_date
+
+		annotation SummarizationSetBy = User
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	partition Customer = m
+		mode: import
+		source =
+				let
+					Source = DeltaLake.Table(Folder.Contents(LakeRoot & "\Tables\gold\dim_customer")),
+					Typed = Table.TransformColumnTypes(Source, {
+						{"customer_key", Int64.Type},
+						{"customer_id", Int64.Type},
+						{"first_invoice_date", type date}
+					})
+				in
+					Typed
+
+	annotation PBI_ResultType = Table

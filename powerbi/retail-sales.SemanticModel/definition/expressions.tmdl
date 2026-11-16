@@ -1,0 +1,9 @@
+expression LakeRoot =
+		"C:\Projects\Data Analysis\retail-sales-pipeline\data\lake" meta [
+			IsParameterQuery = true,
+			Type = "Text",
+			IsParameterQueryRequired = true
+		]
+	lineageTag: 8a52b82b-2b63-4e62-a27c-7cfaba2fe609
+
+	annotation PBI_ResultType = Text

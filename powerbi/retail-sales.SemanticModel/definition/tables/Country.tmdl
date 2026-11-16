@@ -1,0 +1,80 @@
+table Country
+	lineageTag: d1b1dcfe-83a6-4313-9ca9-dc5c81aa14c7
+
+	column 'Country Key'
+		dataType: int64
+		isHidden
+		isKey
+		formatString: 0
+		lineageTag: ffa85639-decb-4a06-8cf8-a693a42d7756
+		summarizeBy: none
+		sourceColumn: country_key
+
+		annotation SummarizationSetBy = User
+
+	column 'Retailer Name'
+		dataType: string
+		lineageTag: ce03fffa-d0e0-4a7b-8700-bcd45dabb080
+		summarizeBy: none
+		sourceColumn: retailer_name
+
+		annotation SummarizationSetBy = User
+
+	column 'Alpha 2'
+		dataType: string
+		lineageTag: 0cea0b6b-4292-4db5-ac1b-6f1b0d7897dc
+		summarizeBy: none
+		sourceColumn: alpha_2
+
+		annotation SummarizationSetBy = User
+
+	column 'Alpha 3'
+		dataType: string
+		lineageTag: 40041fca-ea2a-436f-b26c-8fce2e70bb6c
+		summarizeBy: none
+		sourceColumn: alpha_3
+
+		annotation SummarizationSetBy = User
+
+	column 'ISO Name'
+		dataType: string
+		lineageTag: 7f6d87e7-d6fb-4a24-8e75-20af1d08f007
+		summarizeBy: none
+		sourceColumn: iso_name
+
+		annotation SummarizationSetBy = User
+
+	column 'Region'
+		dataType: string
+		lineageTag: 87b1e129-415b-4288-b6cd-e0164a3a0875
+		summarizeBy: none
+		sourceColumn: region
+
+		annotation SummarizationSetBy = User
+
+	column 'Sub Region'
+		dataType: string
+		lineageTag: c770b2c6-7ca7-4724-abf0-49a708052bf2
+		summarizeBy: none
+		sourceColumn: sub_region
+
+		annotation SummarizationSetBy = User
+
+	partition Country = m
+		mode: import
+		source =
+				let
+					Source = DeltaLake.Table(Folder.Contents(LakeRoot & "\Tables\gold\dim_country")),
+					Typed = Table.TransformColumnTypes(Source, {
+						{"country_key", Int64.Type},
+						{"retailer_name", type text},
+						{"alpha_2", type text},
+						{"alpha_3", type text},
+						{"iso_name", type text},
+						{"region", type text},
+						{"sub_region", type text}
+					})
+				in
+					Typed
+
+	annotation PBI_ResultType = Table

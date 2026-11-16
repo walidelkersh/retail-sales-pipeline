@@ -1,0 +1,53 @@
+table Product
+	lineageTag: f93f0d3a-c9fe-459a-a780-889eb0d1685a
+
+	column 'Product Key'
+		dataType: int64
+		isHidden
+		isKey
+		formatString: 0
+		lineageTag: 34171a50-362e-4ca6-b6a4-e054f30f11d7
+		summarizeBy: none
+		sourceColumn: product_key
+
+		annotation SummarizationSetBy = User
+
+	column 'Stock Code'
+		dataType: string
+		lineageTag: 03237747-f049-4739-89ff-419c94ed50a8
+		summarizeBy: none
+		sourceColumn: stock_code
+
+		annotation SummarizationSetBy = User
+
+	column 'Description'
+		dataType: string
+		lineageTag: 04b85e35-aa60-42a8-802c-1f8271a99936
+		summarizeBy: none
+		sourceColumn: description
+
+		annotation SummarizationSetBy = User
+
+	column 'Is Merchandise'
+		dataType: boolean
+		lineageTag: fb4ada49-d4d3-443a-a352-cb5e184ed361
+		summarizeBy: none
+		sourceColumn: is_merchandise
+
+		annotation SummarizationSetBy = User
+
+	partition Product = m
+		mode: import
+		source =
+				let
+					Source = DeltaLake.Table(Folder.Contents(LakeRoot & "\Tables\gold\dim_product")),
+					Typed = Table.TransformColumnTypes(Source, {
+						{"product_key", Int64.Type},
+						{"stock_code", type text},
+						{"description", type text},
+						{"is_merchandise", type logical}
+					})
+				in
+					Typed
+
+	annotation PBI_ResultType = Table

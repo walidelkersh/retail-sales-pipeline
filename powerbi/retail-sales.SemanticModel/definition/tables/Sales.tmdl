@@ -1,0 +1,195 @@
+table Sales
+	lineageTag: 67ff996f-9835-425f-bb0c-922175855d72
+
+	/// Sum of line amounts in pounds, including negative cancellations.
+	measure 'Net Revenue' = SUM(Sales[Line Amount])
+		formatString: £#,##0.00
+		lineageTag: e905a7c6-f13e-4d7e-bcf9-a55f46945ceb
+
+	/// Sum of non-cancelled line amounts in pounds.
+	measure 'Gross Sales' = CALCULATE([Net Revenue], Sales[Is Cancellation] = FALSE())
+		formatString: £#,##0.00
+		lineageTag: e31250ab-daad-4fe4-bf78-c1a486a1189f
+
+	/// Cancelled line amounts in pounds, expressed as a positive value.
+	measure 'Cancelled Amount' = -CALCULATE([Net Revenue], Sales[Is Cancellation] = TRUE())
+		formatString: £#,##0.00
+		lineageTag: 703a7dea-0ab6-4564-b439-531d11d40f2b
+
+	/// Cancelled amount as a share of gross sales.
+	measure 'Cancellation Rate' = DIVIDE([Cancelled Amount], [Gross Sales])
+		formatString: 0.00%
+		lineageTag: 6f01402a-0f16-4a38-b6f4-500c06f7a9c2
+
+	/// Count of distinct non-cancelled invoice numbers.
+	measure 'Orders' = CALCULATE(DISTINCTCOUNT(Sales[Invoice No]), Sales[Is Cancellation] = FALSE())
+		formatString: #,##0
+		lineageTag: 6f612216-920b-45b5-ac82-15b868eb9df5
+
+	/// Count of distinct cancelled invoice numbers.
+	measure 'Cancelled Invoices' = CALCULATE(DISTINCTCOUNT(Sales[Invoice No]), Sales[Is Cancellation] = TRUE())
+		formatString: #,##0
+		lineageTag: 04a7aac4-1c59-423a-b363-21c229059f9c
+
+	/// Gross sales in pounds per distinct non-cancelled invoice.
+	measure 'Average Order Value' = DIVIDE([Gross Sales], [Orders])
+		formatString: £#,##0.00
+		lineageTag: f93369c9-5f65-42c5-bb80-b1d46b4e908e
+
+	/// Sum of quantities on non-cancelled lines.
+	measure 'Units Sold' = CALCULATE(SUM(Sales[Quantity]), Sales[Is Cancellation] = FALSE())
+		formatString: #,##0
+		lineageTag: 239039df-b28e-4c34-8ff0-d78cf587f6f7
+
+	/// Count of distinct customers on sales lines, excluding unknown customer key 0.
+	measure 'Customers' = CALCULATE(DISTINCTCOUNT(Sales[Customer Key]), Sales[Customer Key] <> 0)
+		formatString: #,##0
+		lineageTag: 37d60eb4-215e-45ad-af97-ef6f00a19d5f
+
+	/// Net revenue from unknown customer key 0 as a share of net revenue.
+	measure 'Revenue Without Customer %' = DIVIDE(CALCULATE([Net Revenue], Sales[Customer Key] = 0), [Net Revenue])
+		formatString: 0.00%
+		lineageTag: b3b63b95-143e-46ab-a8f6-64633c3b32f5
+
+	/// Net revenue in pounds for the same date period in the previous year.
+	measure 'Net Revenue PY' = CALCULATE([Net Revenue], SAMEPERIODLASTYEAR('Date'[Date]))
+		formatString: £#,##0.00
+		lineageTag: 1b11a9b0-a69d-4b74-bbda-a1c16dc9f72b
+
+	/// Change in net revenue as a share of the same period in the previous year.
+	measure 'Net Revenue YoY %' = DIVIDE([Net Revenue] - [Net Revenue PY], [Net Revenue PY])
+		formatString: 0.00%
+		lineageTag: 9dcd3dbf-1e2e-461c-8254-adbaba64451e
+
+	column 'Invoice No'
+		dataType: string
+		lineageTag: 8e0c5ee1-5f23-4cc0-bb2d-0843da993626
+		summarizeBy: none
+		sourceColumn: invoice_no
+
+		annotation SummarizationSetBy = User
+
+	column 'Date Key'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 9cce684e-596c-4e3d-849c-037ccd93b21e
+		summarizeBy: none
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = User
+
+	column 'Product Key'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: d06f33a6-afb9-49a4-96ba-8a093dba26ba
+		summarizeBy: none
+		sourceColumn: product_key
+
+		annotation SummarizationSetBy = User
+
+	column 'Customer Key'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 73a773bf-8abd-4bed-8957-58705e20c6d0
+		summarizeBy: none
+		sourceColumn: customer_key
+
+		annotation SummarizationSetBy = User
+
+	column 'Country Key'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: cee90329-035e-430c-9436-2f812d787178
+		summarizeBy: none
+		sourceColumn: country_key
+
+		annotation SummarizationSetBy = User
+
+	column 'Is Cancellation'
+		dataType: boolean
+		lineageTag: 6b79dbaa-0a1a-4ad1-be7b-a8914fdc8117
+		summarizeBy: none
+		sourceColumn: is_cancellation
+
+		annotation SummarizationSetBy = User
+
+	column 'Quantity'
+		dataType: int64
+		formatString: 0
+		lineageTag: fc24ddce-2f5d-4243-bed2-004f9b666506
+		summarizeBy: none
+		sourceColumn: quantity
+
+		annotation SummarizationSetBy = User
+
+	column 'Unit Price'
+		dataType: decimal
+		formatString: £#,##0.00
+		lineageTag: b7346a5a-7f5e-4680-874e-e5264ba505e3
+		summarizeBy: none
+		sourceColumn: unit_price
+
+		annotation SummarizationSetBy = User
+
+	column 'Line Amount'
+		dataType: decimal
+		formatString: £#,##0.00
+		lineageTag: a9df8813-9cbd-4231-ba22-ab855de34713
+		summarizeBy: none
+		sourceColumn: line_amount
+
+		annotation SummarizationSetBy = User
+
+	column 'Invoice Timestamp UTC'
+		dataType: dateTime
+		formatString: yyyy-mm-dd hh:mm:ss
+		lineageTag: f2d7d858-b20f-4ed4-bd76-4c1b871c90f0
+		summarizeBy: none
+		sourceColumn: invoice_ts
+
+		annotation SummarizationSetBy = User
+
+	column 'Source Sheet'
+		dataType: string
+		lineageTag: f4512bcc-41d4-4c56-ae3f-a83ed6f58a23
+		summarizeBy: none
+		sourceColumn: source_sheet
+
+		annotation SummarizationSetBy = User
+
+	column 'Source Row'
+		dataType: int64
+		formatString: 0
+		lineageTag: 63482a67-9a0d-464d-9834-2af59b6a098f
+		summarizeBy: none
+		sourceColumn: source_row
+
+		annotation SummarizationSetBy = User
+
+	partition Sales = m
+		mode: import
+		source =
+				let
+					Source = DeltaLake.Table(Folder.Contents(LakeRoot & "\Tables\gold\fact_sales")),
+					Typed = Table.TransformColumnTypes(Source, {
+						{"invoice_no", type text},
+						{"date_key", Int64.Type},
+						{"product_key", Int64.Type},
+						{"customer_key", Int64.Type},
+						{"country_key", Int64.Type},
+						{"is_cancellation", type logical},
+						{"quantity", Int64.Type},
+						{"unit_price", Currency.Type},
+						{"line_amount", Currency.Type},
+						{"invoice_ts", type datetimezone},
+						{"source_sheet", type text},
+						{"source_row", Int64.Type}
+					})
+				in
+					Typed
+
+	annotation PBI_ResultType = Table

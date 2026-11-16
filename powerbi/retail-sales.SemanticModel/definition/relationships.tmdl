@@ -1,0 +1,27 @@
+relationship 7481829a-07d2-4abe-b9ff-a719694f8388
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: oneDirection
+	fromColumn: Sales.'Date Key'
+	toColumn: Date.'Date Key'
+
+relationship 10386e4f-d667-48d3-a6aa-e0800957b52f
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: oneDirection
+	fromColumn: Sales.'Product Key'
+	toColumn: Product.'Product Key'
+
+relationship 2f7f5d22-1f64-42ad-90e0-ab0cbb72043f
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: oneDirection
+	fromColumn: Sales.'Customer Key'
+	toColumn: Customer.'Customer Key'
+
+relationship cc5b55ee-cf85-4d5f-9d65-e058bd62a034
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: oneDirection
+	fromColumn: Sales.'Country Key'
+	toColumn: Country.'Country Key'
