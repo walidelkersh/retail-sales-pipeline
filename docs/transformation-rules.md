@@ -13,11 +13,13 @@ Bronze changes nothing. Every rule below is one expression in `sql/silver` or `s
 | stock_code | StockCode | upper-cased, because the workbook writes the same code both ways (79323p and 79323P) |
 | description | Description | outer spaces removed |
 | quantity | Quantity | integer |
-| invoice_ts | InvoiceDate | Excel serial day to timestamp, with day 0 on 1899-12-30, rounded to the second because the serial is a float |
+| invoice_ts | InvoiceDate | Excel serial day to timestamp with a UTC label, with day 0 on 1899-12-30, rounded to the second because the serial is a float |
 | unit_price | Price | DECIMAL(12,3), because a few lines are priced at 0.001 and two decimals would turn them into 0 |
 | customer_id | Customer ID | integer, null when the workbook has no customer |
 | country | Country | unchanged |
 | source_sheet, source_row | the same | unchanged, they are the key of a line |
+
+I keep the UK wall-clock time because the workbook gives no time zone. I store it with a UTC label because the zone-less Delta timestamp is not readable by the Fabric SQL analytics endpoint, Direct Lake, Dataflows Gen2 or pipelines. The clock time is right and the zone label is not, which matters only if I convert it to another zone.
 
 ## Silver: rejected lines
 

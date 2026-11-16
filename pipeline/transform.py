@@ -22,6 +22,8 @@ def expose_table(connection, path):
 @contextmanager
 def lake_connection(lake_root):
     with duckdb.connect() as connection:
+        # Dates and date keys are taken from invoice_ts in session time.
+        connection.execute("SET TimeZone = 'UTC'")
         connection.execute("INSTALL delta")
         connection.execute("LOAD delta")
         for delta_log in sorted((Path(lake_root) / "Tables").glob("*/*/_delta_log")):

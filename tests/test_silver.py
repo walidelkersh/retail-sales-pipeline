@@ -83,7 +83,8 @@ def test_silver_types_and_preserves_lines(bronze_lake, tmp_path, monkeypatch):
             connection.execute("LOAD delta")
             path = table_path("silver", "invoice_lines", tmp_path).as_posix()
             invoice_lines = connection.sql(
-                "SELECT * REPLACE (CAST(invoice_ts AS VARCHAR) AS invoice_ts) "
+                "SELECT * REPLACE (strftime(invoice_ts AT TIME ZONE 'UTC', "
+                "'%Y-%m-%d %H:%M:%S') AS invoice_ts) "
                 "FROM delta_scan(?) ORDER BY source_sheet, source_row",
                 params=[path],
             )
@@ -109,6 +110,29 @@ def test_silver_types_and_preserves_lines(bronze_lake, tmp_path, monkeypatch):
                  "2010-12-01 00:00:00", Decimal("2.500"), 13085,
                  "United Kingdom", "Year 2010-2011", 3),
             ]
+
+
+def test_silver_preserves_evening_time(bronze_lake):
+    with duckdb.connect() as connection:
+        connection.execute("INSTALL delta")
+        connection.execute("LOAD delta")
+        path = table_path("bronze", "online_retail_lines", bronze_lake)
+        expose_table(connection, path)
+        write_deltalake(
+            path,
+            connection.sql("""
+                SELECT * REPLACE ('40148.979166666664' AS "InvoiceDate")
+                FROM bronze.online_retail_lines
+                WHERE source_sheet = 'Year 2009-2010' AND source_row = 1
+            """),
+            mode="overwrite",
+        )
+        run_layer("silver", bronze_lake)
+        expose_table(connection, table_path("silver", "invoice_lines", bronze_lake))
+        assert connection.execute("""
+            SELECT strftime(invoice_ts AT TIME ZONE 'UTC', '%Y-%m-%d %H:%M:%S')
+            FROM silver.invoice_lines
+        """).fetchall() == [("2009-12-01 23:30:00",)]
 
 
 def test_silver_rejects_and_reconciles_lines(bronze_lake):

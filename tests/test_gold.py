@@ -1,9 +1,9 @@
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 
 import duckdb
 import pytest
-from deltalake import write_deltalake
+from deltalake import DeltaTable, write_deltalake
 
 from pipeline.lake import table_path
 from pipeline.transform import expose_table, run_layer
@@ -20,7 +20,7 @@ def gold_lake(tmp_path):
                 stock_code,
                 description,
                 CAST(quantity AS INTEGER) AS quantity,
-                CAST(invoice_ts AS TIMESTAMP) AS invoice_ts,
+                CAST(invoice_ts AS TIMESTAMP) AT TIME ZONE 'UTC' AS invoice_ts,
                 CAST(unit_price AS DECIMAL(12,3)) AS unit_price,
                 CAST(customer_id AS INTEGER) AS customer_id,
                 country,
@@ -140,7 +140,11 @@ def test_fact_sales(gold_lake):
         connection.execute("INSTALL delta")
         connection.execute("LOAD delta")
         expose_table(connection, table_path("gold", "fact_sales", gold_lake))
-        sales = connection.sql("SELECT * FROM gold.fact_sales ORDER BY source_row")
+        sales = connection.sql("""
+            SELECT * REPLACE (
+                strftime(invoice_ts AT TIME ZONE 'UTC', '%Y-%m-%d %H:%M:%S') AS invoice_ts
+            ) FROM gold.fact_sales ORDER BY source_row
+        """)
         assert sales.columns == [
             "invoice_no", "date_key", "product_key", "customer_key", "country_key",
             "is_cancellation", "quantity", "unit_price", "line_amount", "invoice_ts",
@@ -149,23 +153,54 @@ def test_fact_sales(gold_lake):
         assert sales.types[8] == duckdb.sqltype("DECIMAL(18,3)")
         assert sales.fetchall() == [
             ("1", 20111204, 1, 2, 2, False, 1, Decimal("1.250"), Decimal("1.250"),
-             datetime(2011, 12, 4, 9), "Year 2010-2011", 1),
+             "2011-12-04 09:00:00", "Year 2010-2011", 1),
             ("2", 20111202, 1, 1, 2, False, 1, Decimal("1.250"), Decimal("1.250"),
-             datetime(2011, 12, 2, 12), "Year 2010-2011", 2),
+             "2011-12-02 12:00:00", "Year 2010-2011", 2),
             ("C3", 20111202, 1, 2, 2, True, -1, Decimal("1.250"), Decimal("-1.250"),
-             datetime(2011, 12, 2, 8), "Year 2010-2011", 3),
+             "2011-12-02 08:00:00", "Year 2010-2011", 3),
             ("4", 20111202, 1, 0, 2, False, 1, Decimal("1.250"), Decimal("1.250"),
-             datetime(2011, 12, 2, 12), "Year 2010-2011", 4),
+             "2011-12-02 12:00:00", "Year 2010-2011", 4),
             ("5", 20111202, 1, 0, 2, False, 1, Decimal("1.250"), Decimal("1.250"),
-             datetime(2011, 12, 2, 12), "Year 2010-2011", 5),
+             "2011-12-02 12:00:00", "Year 2010-2011", 5),
             ("6", 20111202, 1, 0, 2, False, 1, Decimal("1.250"), Decimal("1.250"),
-             datetime(2011, 12, 2, 12), "Year 2010-2011", 6),
+             "2011-12-02 12:00:00", "Year 2010-2011", 6),
             ("7", 20111204, 3, 1, 1, False, 1, Decimal("1.250"), Decimal("1.250"),
-             datetime(2011, 12, 4, 12), "Year 2010-2011", 7),
+             "2011-12-04 12:00:00", "Year 2010-2011", 7),
             ("8", 20111204, 3, 0, 1, False, 1, Decimal("1.250"), Decimal("1.250"),
-             datetime(2011, 12, 4, 12), "Year 2010-2011", 8),
+             "2011-12-04 12:00:00", "Year 2010-2011", 8),
             ("9", 20111204, 2, 3, 1, False, 1, Decimal("1.250"), Decimal("1.250"),
-             datetime(2011, 12, 4, 12), "Year 2010-2011", 9),
+             "2011-12-04 12:00:00", "Year 2010-2011", 9),
+        ]
+
+
+def test_fact_sales_date_keys_use_utc(gold_lake):
+    with duckdb.connect() as connection:
+        connection.execute("INSTALL delta")
+        connection.execute("LOAD delta")
+        path = table_path("silver", "invoice_lines", gold_lake)
+        expose_table(connection, path)
+        write_deltalake(
+            path,
+            connection.sql("""
+                SELECT lines.* REPLACE (times.invoice_ts AS invoice_ts)
+                FROM silver.invoice_lines AS lines
+                JOIN (VALUES
+                    (1, TIMESTAMPTZ '2009-12-01 07:45:00+00'),
+                    (2, TIMESTAMPTZ '2009-12-01 23:30:00+00'),
+                    (3, TIMESTAMPTZ '2009-12-02 00:01:00+00')
+                ) AS times(source_row, invoice_ts) USING (source_row)
+            """),
+            mode="overwrite",
+        )
+        run_layer("gold", gold_lake)
+        expose_table(connection, table_path("gold", "fact_sales", gold_lake))
+        assert connection.execute("""
+            SELECT strftime(invoice_ts AT TIME ZONE 'UTC', '%Y-%m-%d %H:%M:%S'), date_key
+            FROM gold.fact_sales ORDER BY source_row
+        """).fetchall() == [
+            ("2009-12-01 07:45:00", 20091201),
+            ("2009-12-01 23:30:00", 20091201),
+            ("2009-12-02 00:01:00", 20091202),
         ]
 
 
@@ -186,6 +221,8 @@ def test_real_gold_tables(tmp_path):
             )
     run_layer("silver", tmp_path)
     counts = run_layer("gold", tmp_path)
+    for delta_log in (tmp_path / "Tables").glob("*/*/_delta_log"):
+        assert DeltaTable(delta_log.parent).protocol().min_reader_version == 1
     assert counts["dim_date"] == 739
     assert counts["dim_country"] == 43
     assert counts["fact_sales"] == 1_038_804
@@ -207,6 +244,11 @@ def test_real_gold_tables(tmp_path):
         assert connection.execute("""
             SELECT min(date), max(date) FROM gold.dim_date
         """).fetchall() == [(date(2009, 12, 1), date(2011, 12, 9))]
+        assert connection.execute("""
+            SELECT DISTINCT date_key FROM gold.fact_sales
+            WHERE strftime(invoice_ts AT TIME ZONE 'UTC', '%Y-%m-%d %H:%M:%S')
+                = '2009-12-01 07:45:00'
+        """).fetchall() == [(20091201,)]
         assert connection.execute("""
             SELECT country FROM silver.invoice_lines
             EXCEPT

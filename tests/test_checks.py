@@ -31,13 +31,13 @@ def checks_lake(tmp_path):
             connection.sql("""
                 SELECT * FROM (VALUES
                     ('489434', FALSE, '001', 'MUG', 1,
-                     TIMESTAMP '2009-12-01', CAST(1 AS DECIMAL(12,3)), 13085,
+                     TIMESTAMPTZ '2009-12-01 00:00:00+00', CAST(1 AS DECIMAL(12,3)), 13085,
                      'United Kingdom', 'Year 2009-2010', 1),
                     ('C489449', TRUE, '002', NULL, -1,
-                     TIMESTAMP '2011-01-01', CAST(0.001 AS DECIMAL(12,3)), NULL,
+                     TIMESTAMPTZ '2011-01-01 00:00:00+00', CAST(0.001 AS DECIMAL(12,3)), NULL,
                      'France', 'Year 2010-2011', 1),
                     ('C489450', TRUE, '003', 'TEA', 1,
-                     TIMESTAMP '2011-12-09 23:59:59', CAST(2.5 AS DECIMAL(12,3)), NULL,
+                     TIMESTAMPTZ '2011-12-09 23:59:59+00', CAST(2.5 AS DECIMAL(12,3)), NULL,
                      'Germany', 'Year 2010-2011', 2)
                 ) AS lines(invoice_no, is_cancellation, stock_code, description,
                            quantity, invoice_ts, unit_price, customer_id, country,
