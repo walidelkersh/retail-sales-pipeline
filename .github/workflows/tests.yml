@@ -1,0 +1,24 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen
+      # The workbook is 45 MB and never changes, so download it once.
+      - uses: actions/cache@v4
+        with:
+          path: data/lake/Files/raw
+          key: raw-${{ hashFiles('pipeline/bronze.py') }}
+      - run: uv run python -m pipeline.bronze
+      - run: uv run python -m pipeline.transform silver
+      - run: uv run python -m pipeline.checks silver
+      - run: uv run python -m pipeline.transform gold
+      - run: uv run python -m pipeline.checks gold
+      - run: uv run pytest -q

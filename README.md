@@ -8,7 +8,7 @@ I took two years of invoice lines from a UK online gift retailer, the UCI Online
 cleaned them in SQL into a star schema, and built a Power BI report on top of it. The report and the
 pipeline both run in Microsoft Fabric.
 
-[![Tests](https://img.shields.io/badge/tests-35_passing-2ea44f?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
+[![Tests](https://img.shields.io/github/actions/workflow/status/walidelkersh/retail-sales-pipeline/tests.yml?branch=main&label=tests&style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/walidelkersh/retail-sales-pipeline/actions/workflows/tests.yml)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](pyproject.toml)
 [![Data](https://img.shields.io/badge/data-UCI_CC_BY_4.0-8b1a1a?style=for-the-badge&logo=shieldsdotio&logoColor=white)](docs/data-sources.md)
 
