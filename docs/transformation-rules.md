@@ -51,6 +51,9 @@ The three numbers reconcile: 1,038,804 kept lines and 28,567 rejected lines are 
 - `dim_product.description` is the most frequent description of a stock code, because the same code is described in more than one way over the two years. A tie goes to the alphabetically first.
 - `dim_date` has one row for every day between the first and the last invoice, including the days with no invoice.
 - `fact_sales.line_amount` is quantity times unit price.
+- `fact_orders` rolls the lines of an invoice up to one row. Its timestamp is the earliest one of its lines, because the lines of one invoice can be a few minutes apart.
+- `fact_orders.customer_order_number` numbers the sales of a customer in time order, and the invoice number breaks a tie. `days_since_previous_order` counts calendar days. A cancellation gets no number because it is not an order that the customer placed, and an invoice with no customer gets none because I cannot tell whose history it belongs to.
+- A first order is the first one inside the two years of data, because a customer may have ordered before 1 December 2009.
 - Surrogate keys are numbered in the order of the natural key, so the same data gives the same keys on every run.
 
 ## Checks
@@ -69,5 +72,7 @@ The three numbers reconcile: 1,038,804 kept lines and 28,567 rejected lines are 
 | gold | every key in the fact table exists in its dimension |
 | gold | dimension keys are unique |
 | gold | line amount = quantity times unit price |
+| gold | fact_orders has exactly one row for every invoice in fact_sales, with the same line count, quantity and amount |
+| gold | the order numbers of a customer run from 1 with no gap and no repeat |
 
 There is no check that a cancellation has a negative quantity, because one real cancellation line does not.
