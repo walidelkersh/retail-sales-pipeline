@@ -1,6 +1,33 @@
 # Retail sales pipeline
 
-This is a medallion pipeline over the UCI Online Retail II dataset, which is two years of invoice lines from a UK online gift retailer. It loads the workbook into bronze as text, cleans it into silver with SQL, and builds a star schema in gold. Every layer is a set of Delta tables, and every transformation is a SQL file that DuckDB runs. The same code runs on one machine and in Microsoft Fabric Python notebooks.
+I took two years of invoice lines from a UK online gift retailer, the UCI Online Retail II dataset, cleaned them in SQL into a star schema, and built a Power BI report on top of it. The report and the pipeline both run in Microsoft Fabric.
+
+## What the data shows
+
+![The Overview page, with five cards, net revenue by month and net revenue by region](docs/report-overview.png)
+
+- The business is seasonal. November is the largest month in both years, with 1,461,756 pounds in 2011 and 1,422,655 pounds in 2010, and revenue climbs from September onward, which fits a gift shop in the run-up to Christmas.
+- It did not grow. January to November brought 8,498,611 pounds in 2010 and 8,576,185 pounds in 2011, which is less than one percent more.
+- The line falls at the end because the data stops on 9 December 2011, so the last month is not a whole month.
+
+![The Customers page, with repeat-customer cards, first and repeat revenue by month and the top customers](docs/report-customers.png)
+
+- Repeat customers carry the revenue. Of the customers who bought in the two years, 72.4% came back for a second order, and repeat orders make up 86.0% of the revenue from known customers. The median gap between two orders of the same customer is 25 days.
+- A few customers matter a lot. The top 1% of customers, 59 of 5,939, bring 31.2% of the revenue from known customers.
+- The United Kingdom is 84.9% of net revenue.
+
+![The Operations page, with the cancellation rate, the cancelled amount by country, revenue without a customer and orders by day of week](docs/report-operations.png)
+
+- Cancellations take 7.14% of gross sales over the two years.
+- The shop barely trades on Saturdays. There are 30 orders on a Saturday in two years and 4,835 on a Sunday, so Saturday looks like a closed day rather than a slow one.
+
+![The Products page, with the top ten merchandise products and a table of every product](docs/report-products.png)
+
+`tests/test_findings.py` asserts every number in this section against the gold tables.
+
+## How the data was prepared
+
+The workbook goes into bronze as text, is cleaned into silver with SQL, and becomes a star schema in gold. Every layer is a set of Delta tables, and every transformation is a SQL file that DuckDB runs.
 
 | | |
 |---|---|
@@ -44,10 +71,6 @@ The published model needs one sign-in on its data source credentials in the Powe
 ## Power BI
 
 `powerbi/retail-sales.pbip` opens in Power BI Desktop. Each of its six tables is a Power Query that reads one gold Delta table with `DeltaLake.Table` from the gold folder under the `LakeRoot` parameter, so the parameter has to point at your own `data/lake` before the first refresh. The report has four pages: Overview, Products, Customers and Operations.
-
-![The Overview page, with five cards, net revenue by month and net revenue by region](docs/report-overview.png)
-
-The line falls at the end because the data stops on 9 December 2011, so the last month is not a whole month.
 
 I checked it in Power BI Desktop 2.159. After a refresh the Products table totals 19,057,172.70 pounds and the Customers card shows 5,939, which are the numbers that the tests assert. The Customers page is built on `fact_orders`, which numbers the orders of every customer in time order, and it counts 4,255 customers who ordered more than once.
 
