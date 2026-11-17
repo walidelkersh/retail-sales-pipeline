@@ -30,7 +30,7 @@ The tables are written under `data/lake`, which is not committed. On a fresh clo
 
 ## Run it on Fabric
 
-`fabric/deploy.py` uploads the code to a lakehouse and imports three Python notebooks and a data pipeline that runs them in order. It needs the [Fabric CLI](https://microsoft.github.io/fabric-cli/), logged in, and a lakehouse that was created with schemas enabled.
+`fabric/deploy.py` uploads the code to a lakehouse and imports three Python notebooks and a data pipeline that runs them in order. It also publishes the Power BI model and report, with the model pointed at the gold tables of the lakehouse instead of a local folder. It needs the [Fabric CLI](https://microsoft.github.io/fabric-cli/), logged in, and a lakehouse that was created with schemas enabled.
 
 ```
 uv run python fabric/deploy.py "My workspace.Personal" retail
@@ -39,9 +39,11 @@ fab job run "My workspace.Personal/retail_pipeline.DataPipeline"
 
 Each notebook runs the same commands as above against the lakehouse, so the checks run there as well, and a failing check fails the pipeline. I ran it on a Fabric trial capacity, where one run takes about three minutes. I compared the row counts of the twelve tables and the net amount with what my machine gives, and they were the same. That comparison was a query in a notebook of my own, and it is not in this repository.
 
+The published model needs one sign-in on its data source credentials in the Power BI service before its first refresh. After that I refreshed it and asked it for the same totals with a DAX query, and it gave the same kept lines, invoices and net amount as the table above.
+
 ## Power BI
 
-`powerbi/retail-sales.pbip` opens in Power BI Desktop. Each of its six tables is a Power Query that reads one gold Delta table with `DeltaLake.Table` from the folder in the `LakeRoot` parameter, so the parameter has to point at your own `data/lake` before the first refresh. The report has four pages: Overview, Products, Customers and Operations.
+`powerbi/retail-sales.pbip` opens in Power BI Desktop. Each of its six tables is a Power Query that reads one gold Delta table with `DeltaLake.Table` from the gold folder under the `LakeRoot` parameter, so the parameter has to point at your own `data/lake` before the first refresh. The report has four pages: Overview, Products, Customers and Operations.
 
 ![The Overview page, with five cards, net revenue by month and net revenue by region](docs/report-overview.png)
 
@@ -76,7 +78,7 @@ I did not use Spark, because one million lines fit on one machine and DuckDB rea
 ## What is not done
 
 - On Fabric it runs in my personal workspace on a trial capacity, because my tenant does not let me create a workspace. The pipeline has no schedule, and I started every run by hand.
-- The report is not published anywhere and it is not connected to the lakehouse. It reads the gold tables from a local folder, and it has only been opened in Power BI Desktop.
+- On Fabric the report is in my personal workspace and I have not shared it with anyone. The pipeline does not refresh the model, so I refresh it by hand after a run.
 - `fabric/deploy.py` only adds and replaces files, so a file that I delete from the repository stays in the lakehouse until I remove it there.
 - A first order is only the first one inside the two years of data. The workbook starts on 1 December 2009, so in the first months the report counts old customers as new ones.
 - Lines that repeat another line of the same invoice exactly are kept, because the workbook has no line number and I cannot tell a double scan from a double export.
