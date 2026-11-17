@@ -64,7 +64,7 @@ table Country
 		mode: import
 		source =
 				let
-					Source = DeltaLake.Table(Folder.Contents(LakeRoot & "\Tables\gold\dim_country")),
+					Source = DeltaLake.Table(GoldFolder{[Name = "dim_country"]}[Content]),
 					Typed = Table.TransformColumnTypes(Source, {
 						{"country_key", Int64.Type},
 						{"retailer_name", type text},

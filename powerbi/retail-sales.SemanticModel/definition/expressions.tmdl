@@ -8,3 +8,8 @@ expression LakeRoot =
 
 	annotation PBI_ResultType = Text
 
+expression GoldFolder = Folder.Contents(LakeRoot & "\Tables\gold")
+	lineageTag: 6b0a0d3e-9a4f-4c56-8f0e-3f1f6a2d9c41
+
+	annotation PBI_ResultType = Table
+

@@ -174,7 +174,7 @@ table Sales
 		mode: import
 		source =
 				let
-					Source = DeltaLake.Table(Folder.Contents(LakeRoot & "\Tables\gold\fact_sales")),
+					Source = DeltaLake.Table(GoldFolder{[Name = "fact_sales"]}[Content]),
 					Typed = Table.TransformColumnTypes(Source, {
 						{"invoice_no", type text},
 						{"date_key", Int64.Type},

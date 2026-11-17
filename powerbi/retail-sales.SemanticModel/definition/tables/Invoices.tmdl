@@ -140,7 +140,7 @@ table Invoices
 		mode: import
 		source =
 				let
-					Source = DeltaLake.Table(Folder.Contents(LakeRoot & "\Tables\gold\fact_orders")),
+					Source = DeltaLake.Table(GoldFolder{[Name = "fact_orders"]}[Content]),
 					Typed = Table.TransformColumnTypes(Source, {
 						{"invoice_no", type text},
 						{"date_key", Int64.Type},

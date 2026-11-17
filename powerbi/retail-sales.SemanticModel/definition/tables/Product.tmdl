@@ -40,7 +40,7 @@ table Product
 		mode: import
 		source =
 				let
-					Source = DeltaLake.Table(Folder.Contents(LakeRoot & "\Tables\gold\dim_product")),
+					Source = DeltaLake.Table(GoldFolder{[Name = "dim_product"]}[Content]),
 					Typed = Table.TransformColumnTypes(Source, {
 						{"product_key", Int64.Type},
 						{"stock_code", type text},

@@ -90,7 +90,7 @@ table Date
 		mode: import
 		source =
 				let
-					Source = DeltaLake.Table(Folder.Contents(LakeRoot & "\Tables\gold\dim_date")),
+					Source = DeltaLake.Table(GoldFolder{[Name = "dim_date"]}[Content]),
 					Typed = Table.TransformColumnTypes(Source, {
 						{"date_key", Int64.Type},
 						{"date", type date},

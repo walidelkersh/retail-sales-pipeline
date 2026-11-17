@@ -36,7 +36,7 @@ table Customer
 		mode: import
 		source =
 				let
-					Source = DeltaLake.Table(Folder.Contents(LakeRoot & "\Tables\gold\dim_customer")),
+					Source = DeltaLake.Table(GoldFolder{[Name = "dim_customer"]}[Content]),
 					Typed = Table.TransformColumnTypes(Source, {
 						{"customer_key", Int64.Type},
 						{"customer_id", Int64.Type},

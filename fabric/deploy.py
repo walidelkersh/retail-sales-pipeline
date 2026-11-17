@@ -1,6 +1,8 @@
 import json
 import os
 from pathlib import Path
+import re
+from shutil import copyfile, copytree
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
@@ -77,6 +79,55 @@ def main():
             json.dumps(pipeline, indent=2) + "\n", encoding="utf-8",
         )
         import_item(workspace, "retail_pipeline", "DataPipeline", folder)
+
+        source = root / "powerbi" / "retail-sales.SemanticModel"
+        folder = Path(staging) / "retail_sales.SemanticModel"
+        copytree(source / "definition", folder / "definition")
+        copyfile(source / "definition.pbism", folder / "definition.pbism")
+        expressions_path = folder / "definition" / "expressions.tmdl"
+        expressions = expressions_path.read_bytes()
+        # The service cannot read a local folder, so use OneLake in the staged model.
+        expressions, count = re.subn(
+            rb'(expression LakeRoot =\s*")(?:""|[^"\r\n])*(")',
+            lambda match: match[1] + f"https://onelake.dfs.fabric.microsoft.com/{workspace_id}/{lakehouse_id}".encode("utf-8") + match[2],
+            expressions,
+        )
+        if count != 1:
+            raise ValueError(f"Expected exactly one LakeRoot parameter value; found {count}.")
+        gold_source = rb'Folder.Contents(LakeRoot & "\Tables\gold")'
+        count = expressions.count(gold_source)
+        if count != 1:
+            raise ValueError(f"Expected exactly one local GoldFolder source; found {count}.")
+        expressions_path.write_bytes(expressions.replace(
+            gold_source,
+            b'AzureStorage.DataLake(LakeRoot & "/Tables/gold", [HierarchicalNavigation = true])',
+        ))
+        import_item(workspace, "retail_sales", "SemanticModel", folder)
+
+        semantic_model_id = get_id(f"{workspace}/retail_sales.SemanticModel")
+        source = root / "powerbi" / "retail-sales.Report"
+        folder = Path(staging) / "retail_sales.Report"
+        copytree(source / "definition", folder / "definition")
+        copytree(source / "StaticResources", folder / "StaticResources")
+        report = {
+            "version": "4.0",
+            "datasetReference": {
+                "byConnection": {
+                    "connectionString": None,
+                    "pbiServiceModelId": None,
+                    "pbiModelVirtualServerName": "sobe_wowvirtualserver",
+                    "pbiModelDatabaseName": semantic_model_id,
+                    "name": "EntityDataSource",
+                    "connectionType": "pbiServiceXmlaStyleLive",
+                }
+            },
+        }
+        (folder / "definition.pbir").write_text(
+            json.dumps(report, indent=2) + "\n", encoding="utf-8",
+        )
+        import_item(workspace, "retail_sales", "Report", folder)
+
+    print("The first refresh needs a sign-in on the semantic model's data source credentials in the Power BI service.")
 
 
 if __name__ == "__main__":
