@@ -1,13 +1,38 @@
+<div align="center">
+
 # Retail sales pipeline
 
-I took two years of invoice lines from a UK online gift retailer, the UCI Online Retail II dataset, cleaned them in SQL into a star schema, and built a Power BI report on top of it. The report and the pipeline both run in Microsoft Fabric.
+**When does a UK online gift shop sell, who keeps coming back, and where does the money leak?**
 
-| | |
-|---|---|
-| Data and warehouse | Microsoft Fabric (lakehouse, Python notebooks, data pipeline), Delta Lake, DuckDB SQL |
-| BI and reporting | Power BI (semantic model, DAX measures, report), Power Query, star schema |
-| Engineering | Python, pytest, uv, Fabric CLI |
+I took two years of invoice lines from a UK online gift retailer, the UCI Online Retail II dataset,
+cleaned them in SQL into a star schema, and built a Power BI report on top of it. The report and the
+pipeline both run in Microsoft Fabric.
 
+[![Tests](https://img.shields.io/badge/tests-34_passing-2ea44f?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](pyproject.toml)
+[![Data](https://img.shields.io/badge/data-UCI_CC_BY_4.0-8b1a1a?style=for-the-badge&logo=shieldsdotio&logoColor=white)](docs/data-sources.md)
+
+**Data and warehouse**
+
+[![Microsoft Fabric](https://img.shields.io/badge/Microsoft_Fabric-117865?style=flat-square)](fabric/)
+[![Delta Lake](https://img.shields.io/badge/Delta_Lake-00ADD4?style=flat-square)](pipeline/lake.py)
+[![DuckDB](https://img.shields.io/badge/DuckDB-FFF000?style=flat-square&logo=duckdb&logoColor=black)](pipeline/transform.py)
+[![SQL](https://img.shields.io/badge/SQL-CC2927?style=flat-square&logo=postgresql&logoColor=white)](sql/)
+
+**BI and reporting**
+
+[![Power BI](https://img.shields.io/badge/Power_BI-F2C811?style=flat-square&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI%2BPHBhdGggZD0iTTIxIDF2MjJhMSAxIDAgMCAxLTEgMWgtMy41VjdjMC0uODI3LS42NzMtMS41LTEuNS0xLjVoLTJWMWExIDEgMCAwIDEgMS0xaDZhMSAxIDAgMCAxIDEgMXptLTYgNUg5YTEgMSAwIDAgMC0xIDF2NC41aDJjLjgyNyAwIDEuNS42NzMgMS41IDEuNXYxMUgxNlY3YTEgMSAwIDAgMC0xLTF6bS01IDZINGExIDEgMCAwIDAtMSAxdjEwYTEgMSAwIDAgMCAxIDFoN1YxM2ExIDEgMCAwIDAtMS0xeiIvPjwvc3ZnPg%3D%3D&logoColor=black)](powerbi/)
+[![Power Query](https://img.shields.io/badge/Power_Query-217346?style=flat-square)](powerbi/retail-sales.SemanticModel/definition/expressions.tmdl)
+[![DAX](https://img.shields.io/badge/DAX-F2C811?style=flat-square)](powerbi/retail-sales.SemanticModel/definition/tables/Sales.tmdl)
+[![Star schema](https://img.shields.io/badge/star_schema-4B4B4B?style=flat-square&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI%2BPHBhdGggZD0iTTkgMTBoNnY0SDl2LTR6TTEgMWg1djRIMVYxem0xNyAwaDV2NGgtNVYxek0xIDE5aDV2NEgxdi00em0xNyAwaDV2NGgtNXYtNHpNNi4zIDQuNmwzLjIgNS0uOS41LTMuMi01IC45LS41em0xMS40IDBsLjkuNS0zLjIgNS0uOS0uNSAzLjItNXpNOS41IDE0LjRsLjkuNS0zLjIgNS0uOS0uNSAzLjItNXptNSAwbDMuMiA1LS45LjUtMy4yLTUuOS0uNXoiLz48L3N2Zz4%3D&logoColor=white)](docs/data-model.md)
+
+**Engineering and quality**
+
+[![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)](pipeline/)
+[![pytest](https://img.shields.io/badge/pytest-0A9EDC?style=flat-square&logo=pytest&logoColor=white)](tests/)
+[![uv](https://img.shields.io/badge/uv-DE5FE9?style=flat-square&logo=uv&logoColor=white)](uv.lock)
+
+</div>
 ## What the data shows
 
 ![The Overview page, with five cards, net revenue by month and net revenue by region](docs/report-overview.png)
