@@ -14,3 +14,15 @@ relationship cc5b55ee-cf85-4d5f-9d65-e058bd62a034
 	fromColumn: Sales.'Country Key'
 	toColumn: Country.'Country Key'
 
+relationship daa51c12-0d36-41a3-b21f-f0905a58f6c5
+	fromColumn: Invoices.'Date Key'
+	toColumn: Date.'Date Key'
+
+relationship 58ab0f53-b021-41ea-aeec-e0b3a18c2564
+	fromColumn: Invoices.'Customer Key'
+	toColumn: Customer.'Customer Key'
+
+relationship 5a7738d3-f2b7-4c33-b1f5-eba724adbd5c
+	fromColumn: Invoices.'Country Key'
+	toColumn: Country.'Country Key'
+

@@ -1,0 +1,161 @@
+table Invoices
+	lineageTag: f2983641-30a5-46bb-aa89-4618d8b4c91a
+
+	/// Sum of revenue in pounds from each customer's first order inside the two years of data; the customer may have ordered before December 2009.
+	measure 'First Order Revenue' = CALCULATE(SUM(Invoices[Order Amount]), Invoices[Customer Order Number] = 1)
+		formatString: £#,##0.00
+		lineageTag: 29e7d108-5491-439e-85de-edd9a184644b
+
+	/// Sum of revenue in pounds from orders after each customer's first order in the data.
+	measure 'Repeat Order Revenue' = CALCULATE(SUM(Invoices[Order Amount]), Invoices[Customer Order Number] > 1)
+		formatString: £#,##0.00
+		lineageTag: a22cb04a-4dff-4816-b6cf-f5626aa94b57
+
+	/// Repeat order revenue as a share of first and repeat order revenue.
+	measure 'Repeat Order Revenue %' = DIVIDE([Repeat Order Revenue], [First Order Revenue] + [Repeat Order Revenue])
+		formatString: 0.00%
+		lineageTag: d2592a26-e204-4a73-8dbe-6f92cf534a58
+
+	/// Count of distinct customers with a first order inside the two years of data; the customer may have ordered before December 2009.
+	measure 'Buying Customers' = CALCULATE(DISTINCTCOUNT(Invoices[Customer Key]), Invoices[Customer Order Number] = 1)
+		formatString: #,##0
+		lineageTag: 498a1ac9-7966-4816-92a3-042627876c5d
+
+	/// Count of distinct customers with a second order in the data.
+	measure 'Repeat Customers' = CALCULATE(DISTINCTCOUNT(Invoices[Customer Key]), Invoices[Customer Order Number] = 2)
+		formatString: #,##0
+		lineageTag: 10f21718-3311-4f85-b7f5-3bef1cd31f1d
+
+	/// Customers with a second order as a share of customers with a first order in the data.
+	measure 'Repeat Customer Rate' = DIVIDE([Repeat Customers], [Buying Customers])
+		formatString: 0.00%
+		lineageTag: 6f606d7e-3297-4af1-9f7d-d19e358c0f77
+
+	/// Median number of days since the previous order, excluding blank gaps.
+	measure 'Median Days Between Orders' = MEDIAN(Invoices[Days Since Previous Order])
+		formatString: 0
+		lineageTag: 1d6ca1ec-8b6e-4668-a4b1-b9bf6ae9ba12
+
+	column 'Invoice No'
+		dataType: string
+		lineageTag: a6f7afc6-3ae4-42bb-a75a-209e433e609f
+		summarizeBy: none
+		sourceColumn: invoice_no
+
+		annotation SummarizationSetBy = User
+
+	column 'Date Key'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: ef8d1958-dd68-413c-8329-e89d21e23762
+		summarizeBy: none
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = User
+
+	column 'Customer Key'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 55cbdf6c-a7f8-4a1d-827f-1b019178b673
+		summarizeBy: none
+		sourceColumn: customer_key
+
+		annotation SummarizationSetBy = User
+
+	column 'Country Key'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 367021b4-6561-49f3-88c9-e4cfffcd6a65
+		summarizeBy: none
+		sourceColumn: country_key
+
+		annotation SummarizationSetBy = User
+
+	column 'Is Cancellation'
+		dataType: boolean
+		lineageTag: 63b21785-8da5-4e7c-b043-c6389eb9c44c
+		summarizeBy: none
+		sourceColumn: is_cancellation
+
+		annotation SummarizationSetBy = User
+
+	column 'Invoice Ts'
+		dataType: dateTime
+		formatString: yyyy-mm-dd hh:mm:ss
+		lineageTag: 8c6d6c18-b046-402a-ab11-4e40434355e5
+		summarizeBy: none
+		sourceColumn: invoice_ts
+
+		annotation SummarizationSetBy = User
+
+	column 'Line Count'
+		dataType: int64
+		formatString: 0
+		lineageTag: 05bd7931-1778-4014-b5de-b00a363dbf2c
+		summarizeBy: none
+		sourceColumn: line_count
+
+		annotation SummarizationSetBy = User
+
+	column Quantity
+		dataType: int64
+		formatString: 0
+		lineageTag: 8f30bbba-db64-4fe7-a329-76943254cfbe
+		summarizeBy: none
+		sourceColumn: quantity
+
+		annotation SummarizationSetBy = User
+
+	column 'Order Amount'
+		dataType: decimal
+		formatString: £#,##0.00
+		lineageTag: 08bebb14-da20-4fcc-b45f-f71614a9db34
+		summarizeBy: none
+		sourceColumn: order_amount
+
+		annotation SummarizationSetBy = User
+
+	column 'Customer Order Number'
+		dataType: int64
+		formatString: 0
+		lineageTag: 79a978ec-ad0c-44c6-b6e7-d44b89ac3367
+		summarizeBy: none
+		sourceColumn: customer_order_number
+
+		annotation SummarizationSetBy = User
+
+	column 'Days Since Previous Order'
+		dataType: int64
+		formatString: 0
+		lineageTag: 8cbc925d-06d9-42ad-8742-73a52a1e4140
+		summarizeBy: none
+		sourceColumn: days_since_previous_order
+
+		annotation SummarizationSetBy = User
+
+	partition Invoices = m
+		mode: import
+		source =
+				let
+					Source = DeltaLake.Table(Folder.Contents(LakeRoot & "\Tables\gold\fact_orders")),
+					Typed = Table.TransformColumnTypes(Source, {
+						{"invoice_no", type text},
+						{"date_key", Int64.Type},
+						{"customer_key", Int64.Type},
+						{"country_key", Int64.Type},
+						{"is_cancellation", type logical},
+						{"invoice_ts", type datetimezone},
+						{"line_count", Int64.Type},
+						{"quantity", Int64.Type},
+						{"order_amount", Currency.Type},
+						{"customer_order_number", Int64.Type},
+						{"days_since_previous_order", Int64.Type}
+					})
+				in
+					Typed
+
+	annotation PBI_ResultType = Table
+

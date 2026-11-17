@@ -3,6 +3,7 @@
   "pageOrder": [
     "overview",
     "products",
+    "customers",
     "operations"
   ],
   "activePageName": "overview"

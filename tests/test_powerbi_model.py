@@ -14,6 +14,7 @@ def test_source_columns_match_gold(gold_lake):
         "Product": "dim_product",
         "Customer": "dim_customer",
         "Country": "dim_country",
+        "Invoices": "fact_orders",
     }
     definitions = (
         Path(__file__).resolve().parents[1]
