@@ -111,6 +111,87 @@ def test_fact_sales(gold_lake):
         ]
 
 
+def test_fact_orders(gold_lake):
+    with duckdb.connect() as connection:
+        connection.execute("INSTALL delta")
+        connection.execute("LOAD delta")
+        expose_table(connection, table_path("gold", "fact_orders", gold_lake))
+        orders = connection.sql("""
+            SELECT * REPLACE (
+                strftime(invoice_ts AT TIME ZONE 'UTC', '%Y-%m-%d %H:%M:%S') AS invoice_ts
+            ) FROM gold.fact_orders ORDER BY invoice_no
+        """)
+        assert orders.columns == [
+            "invoice_no", "date_key", "customer_key", "country_key", "is_cancellation",
+            "invoice_ts", "line_count", "quantity", "order_amount",
+            "customer_order_number", "days_since_previous_order",
+        ]
+        assert orders.types[1] == duckdb.sqltype("INTEGER")
+        assert orders.types[8] == duckdb.sqltype("DECIMAL(18,3)")
+        assert orders.fetchall() == [
+            ("1", 20111204, 2, 2, False, "2011-12-04 09:00:00", 1, 1,
+             Decimal("1.250"), 1, None),
+            ("2", 20111202, 1, 2, False, "2011-12-02 12:00:00", 1, 1,
+             Decimal("1.250"), 1, None),
+            ("4", 20111202, 0, 2, False, "2011-12-02 12:00:00", 1, 1,
+             Decimal("1.250"), None, None),
+            ("5", 20111202, 0, 2, False, "2011-12-02 12:00:00", 1, 1,
+             Decimal("1.250"), None, None),
+            ("6", 20111202, 0, 2, False, "2011-12-02 12:00:00", 1, 1,
+             Decimal("1.250"), None, None),
+            ("7", 20111204, 1, 1, False, "2011-12-04 12:00:00", 1, 1,
+             Decimal("1.250"), 2, 2),
+            ("8", 20111204, 0, 1, False, "2011-12-04 12:00:00", 1, 1,
+             Decimal("1.250"), None, None),
+            ("9", 20111204, 3, 1, False, "2011-12-04 12:00:00", 1, 1,
+             Decimal("1.250"), 1, None),
+            ("C3", 20111202, 2, 2, True, "2011-12-02 08:00:00", 1, -1,
+             Decimal("-1.250"), None, None),
+        ]
+
+
+def test_fact_orders_history_and_rollup(gold_lake):
+    with duckdb.connect() as connection:
+        connection.execute("INSTALL delta")
+        connection.execute("LOAD delta")
+        path = table_path("silver", "invoice_lines", gold_lake)
+        expose_table(connection, path)
+        write_deltalake(
+            path,
+            connection.sql("""
+                SELECT lines.* REPLACE (
+                    orders.invoice_no AS invoice_no,
+                    orders.invoice_ts AS invoice_ts,
+                    10 AS customer_id,
+                    'EIRE' AS country
+                )
+                FROM silver.invoice_lines AS lines
+                JOIN (VALUES
+                    (1, '10', TIMESTAMPTZ '2011-12-02 23:59:00+00'),
+                    (2, '2', TIMESTAMPTZ '2011-12-02 23:59:00+00'),
+                    (3, 'C3', TIMESTAMPTZ '2011-12-02 23:58:00+00'),
+                    (6, '10', TIMESTAMPTZ '2011-12-03 00:00:00+00'),
+                    (7, '3', TIMESTAMPTZ '2011-12-03 00:01:00+00')
+                ) AS orders(source_row, invoice_no, invoice_ts) USING (source_row)
+            """),
+            mode="overwrite",
+        )
+        run_layer("gold", gold_lake)
+        expose_table(connection, table_path("gold", "fact_orders", gold_lake))
+        assert connection.execute("""
+            SELECT invoice_no, date_key,
+                strftime(invoice_ts AT TIME ZONE 'UTC', '%Y-%m-%d %H:%M:%S'),
+                line_count, quantity, order_amount,
+                customer_order_number, days_since_previous_order
+            FROM gold.fact_orders ORDER BY invoice_no
+        """).fetchall() == [
+            ("10", 20111202, "2011-12-02 23:59:00", 2, 2, Decimal("2.500"), 1, None),
+            ("2", 20111202, "2011-12-02 23:59:00", 1, 1, Decimal("1.250"), 2, 0),
+            ("3", 20111203, "2011-12-03 00:01:00", 1, 1, Decimal("1.250"), 3, 1),
+            ("C3", 20111202, "2011-12-02 23:58:00", 1, -1, Decimal("-1.250"), None, None),
+        ]
+
+
 def test_fact_sales_date_keys_use_utc(gold_lake):
     with duckdb.connect() as connection:
         connection.execute("INSTALL delta")
@@ -164,6 +245,7 @@ def test_real_gold_tables(tmp_path):
     assert counts["dim_date"] == 739
     assert counts["dim_country"] == 43
     assert counts["fact_sales"] == 1_038_804
+    assert counts["fact_orders"] == 48_354
     assert counts["dim_product"] == 4_758
     assert counts["dim_customer"] == 5_940
     with duckdb.connect() as connection:
@@ -179,6 +261,13 @@ def test_real_gold_tables(tmp_path):
                 count(*) FILTER (WHERE customer_key = 0)
             FROM gold.fact_sales
         """).fetchall() == [(Decimal("19057172.698"), 48_354, 229_327)]
+        assert connection.execute("""
+            SELECT
+                count(*) FILTER (WHERE customer_order_number IS NOT NULL),
+                count(DISTINCT customer_key) FILTER (WHERE customer_order_number = 2),
+                sum(order_amount)
+            FROM gold.fact_orders
+        """).fetchall() == [(36_959, 4_255, Decimal("19057172.698"))]
         assert connection.execute("""
             SELECT min(date), max(date) FROM gold.dim_date
         """).fetchall() == [(date(2009, 12, 1), date(2011, 12, 9))]

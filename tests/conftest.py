@@ -63,6 +63,6 @@ def gold_lake(tmp_path):
     for _ in range(2):
         assert run_layer("gold", tmp_path) == {
             "dim_country": 2, "dim_customer": 4, "dim_date": 3, "dim_product": 3,
-            "fact_sales": 9,
+            "fact_orders": 9, "fact_sales": 9,
         }
     return tmp_path

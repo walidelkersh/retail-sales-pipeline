@@ -145,6 +145,8 @@ def test_gold_checks_pass(gold_checks_lake, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     assert run_checks("gold", gold_checks_lake) == {
         "dimension_keys_are_unique": 0,
+        "fact_orders_matches_fact_sales": 0,
+        "fact_orders_numbers_are_contiguous": 0,
         "fact_sales_amount_is_quantity_times_price": 0,
         "fact_sales_key_is_unique": 0,
         "fact_sales_keys_resolve": 0,
@@ -182,9 +184,26 @@ def test_gold_checks_report_all_failures(gold_checks_lake):
         run_checks("gold", gold_checks_lake)
     assert str(failure.value) == (
         "Checks failed: dimension_keys_are_unique: 1; "
+        "fact_orders_matches_fact_sales: 1; "
         "fact_sales_amount_is_quantity_times_price: 1; fact_sales_key_is_unique: 1; "
         "fact_sales_keys_resolve: 1; fact_sales_matches_silver: 1"
     )
+
+
+@pytest.mark.parametrize("check, replacement, count", [
+    ("fact_orders_matches_fact_sales", "CAST(order_amount + 1 AS DECIMAL(18,3)) AS order_amount", 3),
+    ("fact_orders_numbers_are_contiguous", "customer_order_number + 1 AS customer_order_number", 1),
+])
+def test_fact_orders_checks_catch_faults(gold_checks_lake, check, replacement, count):
+    with lake_connection(gold_checks_lake) as connection:
+        write_deltalake(
+            table_path("gold", "fact_orders", gold_checks_lake),
+            connection.sql(f"SELECT * REPLACE ({replacement}) FROM gold.fact_orders"),
+            mode="overwrite",
+        )
+    with pytest.raises(ValueError) as failure:
+        run_checks("gold", gold_checks_lake)
+    assert str(failure.value) == f"Checks failed: {check}: {count}"
 
 
 @pytest.mark.skipif(
@@ -199,9 +218,11 @@ def test_real_silver_checks():
         "rejected_lines_reason_is_known": 0,
         "silver_reconciles_with_bronze": 0,
     }
-    if table_path("gold", "fact_sales").is_dir():
+    if all(table_path("gold", table).is_dir() for table in ("fact_sales", "fact_orders")):
         assert run_checks("gold") == {
             "dimension_keys_are_unique": 0,
+            "fact_orders_matches_fact_sales": 0,
+            "fact_orders_numbers_are_contiguous": 0,
             "fact_sales_amount_is_quantity_times_price": 0,
             "fact_sales_key_is_unique": 0,
             "fact_sales_keys_resolve": 0,
