@@ -2,6 +2,12 @@
 
 I took two years of invoice lines from a UK online gift retailer, the UCI Online Retail II dataset, cleaned them in SQL into a star schema, and built a Power BI report on top of it. The report and the pipeline both run in Microsoft Fabric.
 
+| | |
+|---|---|
+| Data and warehouse | Microsoft Fabric (lakehouse, Python notebooks, data pipeline), Delta Lake, DuckDB SQL |
+| BI and reporting | Power BI (semantic model, DAX measures, report), Power Query, star schema |
+| Engineering | Python, pytest, uv, Fabric CLI |
+
 ## What the data shows
 
 ![The Overview page, with five cards, net revenue by month and net revenue by region](docs/report-overview.png)
