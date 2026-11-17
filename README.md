@@ -70,6 +70,10 @@ uv run python fabric/deploy.py "My workspace.Personal" retail
 fab job run "My workspace.Personal/retail_pipeline.DataPipeline"
 ```
 
+![The Fabric workspace in lineage view: the lakehouse feeds the three notebooks, the notebooks feed the pipeline, and a storage connection feeds the semantic model and the report](docs/fabric-lineage.png)
+
+The box called Azure Data Lake Storage Gen2 is the gold folder of the same lakehouse. Fabric shows it as a separate source because the model reads it through its OneLake address.
+
 Each notebook runs the same commands as above against the lakehouse, so the checks run there as well, and a failing check fails the pipeline. I ran it on a Fabric trial capacity, where one run takes about three minutes. I compared the row counts of the twelve tables and the net amount with what my machine gives, and they were the same. That comparison was a query in a notebook of my own, and it is not in this repository.
 
 The published model needs one sign-in on its data source credentials in the Power BI service before its first refresh. After that I refreshed it and asked it for the same totals with a DAX query, and it gave the same kept lines, invoices and net amount as the table above.
