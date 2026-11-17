@@ -72,6 +72,19 @@
             "width": 234
           },
           "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 852.41301535328375,
+            "y": 262.19982652452416
+          },
+          "nodeIndex": "Invoices",
+          "nodeLineageTag": "f2983641-30a5-46bb-aa89-4618d8b4c91a",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
         }
       ],
       "name": "All tables",
